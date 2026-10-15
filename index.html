@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN" data-lang="zh">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark"><meta name="description" content="BYD España · 官方车型与版本、续航、动力、AC/DC 充电、价格与配置比较">
+<title>BYD España · 车型与版本指南</title>
+<script>
+(function(){
+ try {
+  var s = localStorage.getItem('byd-theme');
+  var t = s || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = t;
+ } catch(e){}
+})();
+</script>
+<link rel="stylesheet" href="styles.css">
+<script src="data.js" defer></script><script src="core.js" defer></script><script src="i18n.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+<header id="nav" class="nav"></header>
+<div id="flyout" class="flyout" hidden></div>
+<main id="main"></main>
+<aside id="tray" class="tray" aria-label="Comparison selection"></aside>
+<dialog id="detail"><div class="dlg-backdrop" data-action="close"></div><div class="dlg-panel" id="detailPanel"><div id="detailBody"></div></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript>请启用 JavaScript 以查看车型对比。 Activa JavaScript para comparar modelos.</noscript>
+</body></html>
