@@ -45,6 +45,7 @@ var BYDI18N = (() => {
  quoteCostNote:['按“用车成本”页的假设计算：','Según las hipótesis de Coste de uso:'],quoteDisclaimer:['本页为参考信息，不构成要约。价格、促销与配置以签约时官方条件为准；续航与能耗为 WLTP 认证值。','Documento orientativo, no constituye oferta. Precios, promociones y equipamiento según condiciones oficiales al firmar; autonomía y consumos WLTP.'],
  themeToggle:['切换主题外观','Cambiar modo de tema'],
 
+ palVersions:['版本','Versiones'],palEmpty:['没有匹配的车型或版本','Ningún modelo o versión coincide'],palHint:['↑↓ 选择 · Enter 打开 · Esc 关闭','↑↓ elegir · Enter abrir · Esc cerrar'],
  cg_use:['用车','Uso'],cg_elec:['电','Electricidad'],cg_fuel:['油','Gasolina'],cg_phev:['插电混动','Híbridos enchufables'],
  };
  const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();

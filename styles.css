@@ -3487,16 +3487,103 @@ input[type=range]:active::-moz-range-thumb{transform:scale(1.36,1.42);background
 
 /* Nav glass: 1px refracted edge + a soft highlight that follows the cursor */
 .nav::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1px;
- background:linear-gradient(170deg,rgba(255,255,255,.95),rgba(255,255,255,.15) 40%,rgba(255,255,255,.05) 60%,rgba(255,255,255,.7));
+ background:var(--edge-light);
  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 .nav::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .35s var(--ease);
  background:radial-gradient(160px 80px at var(--nx,50%) 0%,rgba(255,255,255,.55),transparent 70%)}
 .nav:hover::before{opacity:1}
 html[data-theme="dark"] .nav::before{background:radial-gradient(160px 80px at var(--nx,50%) 0%,rgba(255,255,255,.12),transparent 70%)}
-html[data-theme="dark"] .nav::after{background:linear-gradient(170deg,rgba(255,255,255,.35),rgba(255,255,255,.04) 40%,rgba(255,255,255,.02) 60%,rgba(255,255,255,.22))}
+html[data-theme="dark"] .nav::after{background:var(--edge-dark)}
 .nav>*{position:relative;z-index:1}
 @media(prefers-reduced-motion:reduce){.is-pressing>.seg-glider,.seg-glider.settling{--gsx:1;--gsy:1}.is-pressing>button.lens-target{transform:none}}
 .seg.is-pressing>button,.chips.is-pressing>button,.subnav.is-pressing>button{transform:none!important}
 .seg.is-pressing>button.lens-target,.chips.is-pressing>button.lens-target,.subnav.is-pressing>button.lens-target{transform:scale(1.06)!important}
 @media(prefers-reduced-motion:reduce){.seg.is-pressing>button.lens-target,.chips.is-pressing>button.lens-target,.subnav.is-pressing>button.lens-target{transform:none!important}}
 .version-card .car-image{aspect-ratio:1.75}
+
+/* --------------------------------------------------------------------------
+   Liquid Glass, part 2 (after iOS 27): dispersion edge, switch, row lens,
+   quick search, tinted detail window. Colour stays neutral; only the detail
+   window edge picks up a faint BEV / PHEV hue.
+   -------------------------------------------------------------------------- */
+:root{
+ /* 1px edge: white fresnel top and bottom, a whisper of cool / warm dispersion on the curved sides */
+ --edge-light:conic-gradient(from 135deg,rgba(255,255,255,.95) 0deg,rgba(140,210,255,.42) 55deg,rgba(255,255,255,.2) 110deg,rgba(255,255,255,.85) 175deg,rgba(255,200,140,.38) 235deg,rgba(200,175,255,.28) 295deg,rgba(255,255,255,.95) 360deg);
+ --edge-dark:conic-gradient(from 135deg,rgba(255,255,255,.34) 0deg,rgba(140,210,255,.2) 55deg,rgba(255,255,255,.04) 110deg,rgba(255,255,255,.22) 175deg,rgba(255,200,140,.16) 235deg,rgba(200,175,255,.12) 295deg,rgba(255,255,255,.34) 360deg);
+}
+.tray::after,.pal-box::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1px;background:var(--edge-light);
+ -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+html[data-theme="dark"] .tray::after,html[data-theme="dark"] .pal-box::after{background:var(--edge-dark)}
+
+/* Switch: wide capsule thumb that lifts into a clear lens while pressed */
+.switch{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.switch input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+.switch .sw{position:relative;flex:none;width:54px;height:30px;border-radius:999px;background:rgba(120,120,128,.2);transition:background-color .3s var(--ease)}
+html[data-theme="dark"] .switch .sw{background:rgba(120,120,128,.36)}
+.switch .sw i{position:absolute;top:2px;left:2px;width:34px;height:26px;border-radius:999px;background:#fff;
+ box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.12);
+ transform:translateX(var(--x,0)) scale(var(--sx,1),var(--sy,1));
+ transition:transform .5s var(--ease-liquid),background-color .2s var(--ease),box-shadow .25s var(--ease)}
+.switch input:checked+.sw{background:var(--blue)}
+.switch input:checked+.sw i{--x:16px}
+.switch:active .sw i{--sx:1.32;--sy:1.48;background:rgba(255,255,255,.24);
+ box-shadow:0 6px 16px rgba(0,0,0,.16),inset 0 1.5px 1px rgba(255,255,255,.95),inset 0 -1.2px 1px rgba(255,255,255,.7),inset 0 0 0 .5px rgba(0,0,0,.12)}
+.switch input:focus-visible+.sw{outline:2px solid var(--blue);outline-offset:3px}
+
+/* Row lens: neutral glass that glides between rows; replaces the flat hover fill on pointer devices */
+#ladder,#costList{position:relative}
+.has-row-lens>.l-row{position:relative}
+.has-row-lens>.l-row:hover{background:transparent}
+.row-lens{position:absolute;left:-8px;right:-8px;top:0;border-radius:var(--r-sm);pointer-events:none;opacity:0;
+ transform:translateY(var(--ly,0));
+ background:radial-gradient(120% 160% at 50% 0%,rgba(255,255,255,.75),rgba(255,255,255,.35) 60%,rgba(255,255,255,.2));
+ box-shadow:0 6px 18px rgba(0,0,0,.06),inset 0 1px 1px rgba(255,255,255,.95),inset 0 -1px 1px rgba(255,255,255,.6),inset 0 0 0 .5px rgba(0,0,0,.07);
+ transition:transform .45s var(--ease-liquid),height .45s var(--ease-liquid),opacity .2s var(--ease)}
+.row-lens.on{opacity:1}
+html[data-theme="dark"] .row-lens{background:radial-gradient(120% 160% at 50% 0%,rgba(255,255,255,.1),rgba(255,255,255,.05) 60%,rgba(255,255,255,.03));
+ box-shadow:0 6px 18px rgba(0,0,0,.4),inset 0 1px 1px rgba(255,255,255,.22),inset 0 -1px 1px rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.06)}
+
+/* Quick search */
+.search-toggle{width:32px;height:32px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;color:var(--graphite);background:var(--surface);border:1px solid var(--hair);
+ transition:transform .35s var(--ease-spring),border-color .2s var(--ease),color .2s var(--ease)}
+.search-toggle:hover{color:var(--ink);border-color:var(--hair-strong);transform:scale(1.08)}
+.search-toggle:active{transform:scale(.92)}
+.palette{position:fixed;inset:0;margin:0;padding:12vh 16px 16px;border:0;width:100%;height:100%;max-width:none;max-height:none;background:transparent;color:var(--ink)}
+.palette[open]{display:flex;justify-content:center;align-items:flex-start}
+.palette::backdrop{background:rgba(15,18,25,.32);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.pal-box{position:relative;width:min(620px,100%);max-height:min(560px,76vh);display:flex;flex-direction:column;border-radius:24px;overflow:hidden;
+ background:var(--glass);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);
+ box-shadow:0 30px 80px rgba(0,0,0,.28),0 0 0 1px var(--glass-border);animation:pal-in .32s var(--ease-liquid)}
+@keyframes pal-in{from{opacity:0;transform:translateY(-8px) scale(.97)}}
+.pal-field{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--hair);color:var(--graphite)}
+.pal-field input,.pal-field input:focus{flex:1;min-width:0;border:0;border-radius:0;padding:0;box-shadow:none;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:17px}
+.pal-field kbd,.pal-foot{font:500 11px var(--font);color:var(--quiet)}
+.pal-field kbd{padding:3px 7px;border-radius:7px;border:1px solid var(--hair)}
+.pal-list{overflow:auto;overscroll-behavior:contain;padding:6px 8px 8px}
+.pal-group{padding:10px 10px 4px;font-size:11px;font-weight:600;color:var(--quiet)}
+.pal-item{display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:12px;width:100%;padding:7px 10px;border-radius:14px;text-align:left;color:inherit}
+.pal-item img{width:56px;height:32px;object-fit:contain}
+.pal-item b{display:block;font-size:14px;font-weight:600}
+.pal-item small{display:block;font-size:12px;color:var(--graphite);margin-top:1px}
+.pal-item em{font-style:normal;font-size:12.5px;color:var(--graphite);white-space:nowrap}
+.pal-item[aria-selected="true"]{background:radial-gradient(120% 160% at 50% 0%,rgba(255,255,255,.8),rgba(255,255,255,.4) 60%,rgba(255,255,255,.25));
+ box-shadow:0 4px 14px rgba(0,0,0,.06),inset 0 1px 1px rgba(255,255,255,.95),inset 0 0 0 .5px rgba(0,0,0,.08)}
+html[data-theme="dark"] .pal-item[aria-selected="true"]{background:rgba(255,255,255,.08);box-shadow:inset 0 1px 1px rgba(255,255,255,.2),inset 0 0 0 1px rgba(255,255,255,.06)}
+.pal-empty{padding:28px 12px;text-align:center;color:var(--graphite);font-size:13px}
+.pal-foot{padding:9px 18px;border-top:1px solid var(--hair)}
+@media(hover:none),(pointer:coarse){.pal-foot,.pal-field kbd{display:none}}
+@media(max-width:520px){.palette{padding-top:10px}.pal-box{max-height:calc(100dvh - 20px)}.pal-item{grid-template-columns:44px 1fr auto}.pal-item img{width:44px}}
+
+/* Detail window: faint BEV / PHEV tint on its edge */
+.dlg-panel[data-type]{--tint:var(--ev)}
+.dlg-panel[data-type="PHEV"]{--tint:var(--fuel)}
+@supports (color:color-mix(in srgb,red,blue)){
+ .dlg-panel[data-type]{box-shadow:0 40px 100px rgba(0,0,0,.32),0 0 0 1px color-mix(in srgb,var(--tint) 38%,var(--glass-border)),0 24px 70px -28px color-mix(in srgb,var(--tint) 40%,transparent),inset 0 1px 0 rgba(255,255,255,.6)}
+ html[data-theme="dark"] .dlg-panel[data-type]{box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 1px color-mix(in srgb,var(--tint) 45%,transparent),0 24px 70px -28px color-mix(in srgb,var(--tint) 35%,transparent),inset 0 1px 0 rgba(255,255,255,.1)}
+}
+#detail.morphing .dlg-panel{box-shadow:none}
+/* The scrollable panel takes focus when the window opens from the keyboard; the window itself is the focus cue */
+.dlg-panel:focus-visible{outline:none}
+
+@media(prefers-reduced-motion:reduce){.switch:active .sw i{--sx:1;--sy:1}.row-lens{transition:opacity .2s}.pal-box{animation:none}}
+@media print{.search-toggle,.palette,.row-lens{display:none!important}}

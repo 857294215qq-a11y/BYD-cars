@@ -19,12 +19,13 @@ const fmt=(n,d=1)=>n==null?t('unknown'):new Intl.NumberFormat(locale(),{maximumF
 const money=n=>n==null?t('unknown'):new Intl.NumberFormat(locale(),{style:'currency',currency:'EUR',maximumFractionDigits:Number.isInteger(n)?0:2}).format(n);
 const cv=n=>Math.round(n*1.359621617);
 const vget=id=>D.versions.find(v=>v.id===id),fget=id=>D.families.find(v=>v.id===id);
-const icon=(name)=>{const p={arrow:'<path d="M5 12h14m-6-6 6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',check:'<path d="m5 12 4 4L19 6"/>',screen:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',print:'<path d="M7 8V3h10v5M7 17H4V9h16v8h-3"/><path d="M7 13h10v8H7z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14l-1.41 1.41"/>',moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',sparkle:'<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>',zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'};return `<svg class="icon icon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p[name]||p.arrow}</svg>`;};
+const icon=(name)=>{const p={arrow:'<path d="M5 12h14m-6-6 6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',check:'<path d="m5 12 4 4L19 6"/>',screen:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',print:'<path d="M7 8V3h10v5M7 17H4V9h16v8h-3"/><path d="M7 13h10v8H7z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14l-1.41 1.41"/>',moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',sparkle:'<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>',zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'};return `<svg class="icon icon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p[name]||p.arrow}</svg>`;};
 const btn=(label,action,id='',classes='')=>`<button class="btn ${classes}" data-action="${action}" ${id?`data-id="${esc(id)}"`:''}>${label}</button>`;
 const typePill=type=>`<span class="pill ${type==='BEV'?'ev':'phev'}">${t(type==='BEV'?'bev':'phev')}</span>`;
 const segmented=(action,active,opts)=>`<div class="seg" data-action-group="${action}"><div class="seg-glider" aria-hidden="true"></div>${opts.map(([val,label])=>`<button data-action="${action}" data-id="${val}" aria-pressed="${active===val}">${label}</button>`).join('')}</div>`;
 const typeSeg=(action,active)=>segmented(action,active,[['',t('all')],['BEV',t('bev')],['PHEV',t('phev')]]);
 const selected=id=>S.selected.includes(id);
+const MOD_KEY=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent)?'⌘':'Ctrl';
 function save(){try{localStorage.setItem('byd-guide-v1',JSON.stringify({lang:S.lang,selected:S.selected,cost:S.cost,theme:S.theme}));}catch{}}
 function toast(msg){$('#toast').textContent=msg;$('#toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('on'),3000);}
 // Capsule indicators for segmented controls, chips, sub-tabs and the nav.
@@ -135,13 +136,14 @@ function renderNav(){
  document.title=S.lang==='es'?'BYD España · Comparador de versiones':'BYD España · 车型与版本指南';
  const navEl=$('#nav');if(!navEl)return;
  if(!navEl.querySelector('.nav-links')){
-  navEl.innerHTML=`<button class="brand" data-action="view" data-id="catalog" aria-label="BYD España"><span class="byd-logo">BYD</span><span class="brand-region">España</span></button><div class="nav-links">${NAV_KEYS.map(k=>{const menu=!['compare','cost'].includes(k);return `<button data-action="view" data-id="${k}" ${menu?`data-menu="${k}" aria-haspopup="true" aria-expanded="false"`:''}>${bi(k)}${menu?chevron:''}</button>`;}).join('')}</div><div class="nav-actions"><button class="theme-toggle btn compact" data-action="theme"></button><div class="seg lang" data-action-group="lang"><button data-action="lang" data-id="zh">中文</button><button data-action="lang" data-id="es">ES</button></div></div>`;
+  navEl.innerHTML=`<button class="brand" data-action="view" data-id="catalog" aria-label="BYD España"><span class="byd-logo">BYD</span><span class="brand-region">España</span></button><div class="nav-links">${NAV_KEYS.map(k=>{const menu=!['compare','cost'].includes(k);return `<button data-action="view" data-id="${k}" ${menu?`data-menu="${k}" aria-haspopup="true" aria-expanded="false"`:''}>${bi(k)}${menu?chevron:''}</button>`;}).join('')}</div><div class="nav-actions"><button class="search-toggle" data-action="palette">${icon('search')}</button><button class="theme-toggle btn compact" data-action="theme"></button><div class="seg lang" data-action-group="lang"><button data-action="lang" data-id="zh">中文</button><button data-action="lang" data-id="es">ES</button></div></div>`;
  }
  navEl.querySelectorAll('.nav-links [data-action="view"]').forEach(b=>{
   const k=b.dataset.id,cur=S.view===k||(k==='catalog'&&S.view==='model');
   if(cur)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
   if(b.dataset.menu)b.setAttribute('aria-expanded',flyMenu===k);
  });
+ const searchBtn=navEl.querySelector('.search-toggle');searchBtn.setAttribute('aria-label',t('search'));searchBtn.title=`${t('search')} · ${MOD_KEY} K`;
  const themeBtn=navEl.querySelector('.theme-toggle');
  themeBtn.setAttribute('aria-label',t('themeToggle'));themeBtn.title=t('themeToggle');themeBtn.innerHTML=icon(S.theme==='dark'?'sun':'moon');
  navEl.querySelectorAll('.seg.lang button').forEach(b=>b.setAttribute('aria-pressed',S.lang===b.dataset.id));
@@ -226,9 +228,10 @@ function rawEquipment(vs){
 function links(f,compact=false){return `<div class="source-links">${[['model','modelPage'],['config','configPage'],['compare','compareJSON'],['promo','promoPage']].filter(([k])=>f.sources[k]&&!(k==='promo'&&f.id==='tang')).map(([k,l])=>`<a href="${esc(f.sources[k])}" target="_blank" rel="noopener">${t(l)}</a>`).join('')}<a href="catalog/${f.id}.pdf" target="_blank">${t('catalogPDF')}</a></div>`;}
 function sourceCard(f){return `<article class="source-card"><h3>${f.name}</h3>${links(f)}${f.notes.length?`<div class="notice"><b>${t('notice')}</b>${f.notes.map(n=>`<p>${esc(n[S.lang==='es'?1:0])}</p>`).join('')}</div>`:''}${f.promotionOriginal?`<p class="hint">${t('promoUntil')} 31/10/2026 · ${t('expiryHint')}</p><details class="terms"><summary>${t('showOriginal')}</summary><p lang="es">${esc(f.promotionOriginal)}</p></details>`:''}</article>`;}
 function sourcesFor(vs){return `<div class="source-columns">${[...new Set(vs.map(v=>v.family))].map(fid=>sourceCard(fget(fid))).join('')}</div>`;}
+const compareContent=vs=>comparisonTable(vs)+rawEquipment(vs)+sourcesFor(vs);
 function renderCompare(){
  const vs=comparisonIds().map(vget).filter(Boolean);
- $('#main').innerHTML=`<div class="wrap">${hero('compareTitle','compareSub')}${vs.length?`<div class="compare-actions"><label><input type="checkbox" id="onlyDiff" ${S.diff?'checked':''}>${t('onlyDiff')}</label><div>${btn(icon('print')+t('print'),'print','','compact')}${btn(t('backModels'),'view','catalog','compact')}${btn(t('clear'),'clear','','compact')}</div></div><div id="comparisonContent">${comparisonTable(vs)}${rawEquipment(vs)}${sourcesFor(vs)}</div>`:`<div class="empty"><h2>${t('noSelection')}</h2><p>${t('noSelectionSub')}</p><div class="quick-start">${btn('SEAL · '+t('compareFamily'),'familyCompare','seal','primary')}${btn('ATTO 2 DM-i · '+t('compareFamily'),'familyCompare','atto-2-dm-i')}${btn('DOLPHIN SURF · '+t('compareFamily'),'familyCompare','dolphin-surf')}</div></div>`}${footer()}</div>`;
+ $('#main').innerHTML=`<div class="wrap">${hero('compareTitle','compareSub')}${vs.length?`<div class="compare-actions"><label class="switch"><input type="checkbox" role="switch" id="onlyDiff" ${S.diff?'checked':''}><span class="sw" aria-hidden="true"><i></i></span>${t('onlyDiff')}</label><div>${btn(icon('print')+t('print'),'print','','compact')}${btn(t('backModels'),'view','catalog','compact')}${btn(t('clear'),'clear','','compact')}</div></div><div id="comparisonContent">${compareContent(vs)}</div>`:`<div class="empty"><h2>${t('noSelection')}</h2><p>${t('noSelectionSub')}</p><div class="quick-start">${btn('SEAL · '+t('compareFamily'),'familyCompare','seal','primary')}${btn('ATTO 2 DM-i · '+t('compareFamily'),'familyCompare','atto-2-dm-i')}${btn('DOLPHIN SURF · '+t('compareFamily'),'familyCompare','dolphin-surf')}</div></div>`}${footer()}</div>`;
 }
 // Ladder: every version on one shared km scale; electric + fuel range stacked, key numbers beside.
 const SORTS=[['total','sortTotal'],['range','sortRange'],['fuelRange','sortFuelRange'],['msrp','sortPrice'],['consumption','sortConsumption'],['fuel','sortFuel'],['weightedFuel','sortWeighted'],['power','sortPower'],['accel','sortAccel'],['dc','sortDC'],['battery','sortBattery']];
@@ -524,7 +527,7 @@ function morph(open){
 }
 function renderDetail(id,srcEl=null){
  const v=vget(id);if(!v||morphing)return;const f=fget(v.family),d=$('#detail');
- modalId=id;
+ modalId=id;$('#detailPanel').dataset.type=v.type;
  if(d.open){$('#detailBody').innerHTML=detailBodyHtml(v,f);return;}
  $('#detailBody').innerHTML=detailBodyHtml(v,f);
  d.showModal();$('#detailPanel').scrollTop=0;
@@ -604,6 +607,7 @@ document.addEventListener('click',event=>{
   renderDetail(id,origin);
  }
  if(action==='close')closeDialog();
+ if(action==='palette')openPalette();
  if(action==='clear'){S.selected=[];familyCompareIds=null;save();render();}
  if(action==='reset'){Object.assign(S,{type:'',family:'',seg:'',body:'',query:'',price:'msrp',budget:0,sort:''});renderCatalog();}
  if(action==='familyCompare'){if(modalId)closeDialog(true);familyCompareIds=D.versions.filter(v=>v.family===id).map(v=>v.id);S.diff=false;S.eqQuery='';navigate('compare');}
@@ -615,7 +619,7 @@ document.addEventListener('change',event=>{
  if(['family','price','sort','budget'].includes(id)){S[id]=id==='budget'?Number(el.value):el.value;renderCards();}
  if(id==='rankSort'){S.rankSort=el.value;S.rankDir='';renderLadder();}
  if(id==='quoteColor'){S.quoteColor[el.dataset.id]=el.value;renderQuote(el.dataset.id);}
- if(id==='onlyDiff'){S.diff=el.checked;renderCompare();}
+ if(id==='onlyDiff'){S.diff=el.checked;$('#comparisonContent').innerHTML=compareContent(comparisonIds().map(vget).filter(Boolean));}
 });
 // Flyouts: hover on pointer devices, tap on touch, ArrowDown / Escape from the keyboard.
 $('#nav').addEventListener('mouseover',e=>{if(!canHover())return;const b=e.target.closest('[data-menu]');if(b)openFly(b.dataset.menu);else if(e.target.closest('.nav-links button,.nav-actions,.brand'))closeFly(120);});
@@ -637,5 +641,67 @@ window.addEventListener('resize',()=>syncGliders(),{passive:true});
 $('#detail').addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 $('#detail').addEventListener('close',()=>{modalId=null;});
 window.addEventListener('hashchange',()=>{Object.assign(S,parseHash());if(S.view==='rank'&&S.sub&&groupOf(S.rankSort)!==S.sub){const g=RANK_GROUPS.find(x=>x[0]===S.sub);if(g){S.rankSort=g[1][0];S.rankDir='';}}closeFly();render();window.scrollTo({top:0,behavior:'instant'});});
+// Quick search (⌘K on Mac, Ctrl K elsewhere, or "/"): jump straight to a model page or a version's details.
+let palItems=[],palActive=0;
+const compact=s=>s.replace(/[^a-z0-9\u4e00-\u9fff]/g,'');
+function palIndex(){
+ // Type words include everyday short forms (插混, 电车, EV…) as well as the interface labels.
+ const words=(type,seg,body)=>[I.strings[type==='BEV'?'bev':'phev'],type==='BEV'?'ev 电动 电车':'插混 混动 hybrid hibrido',I.strings['seg'+seg],I.strings['body_'+body]].filter(Boolean).flat().join(' ');
+ const models=D.families.map(f=>{const vs=D.versions.filter(v=>v.family===f.id),lo=Math.min(...vs.map(v=>v.msrp).filter(C.present));
+  return {kind:'model',id:f.id,title:f.name,sub:`${t(f.type==='BEV'?'bev':'phev')} · ${vs.length} ${t('versions')}`,right:Number.isFinite(lo)?`${t('from')} ${kEuro(lo)}`:'',img:f.image,hay:I.norm(`${f.name} ${f.id} ${f.type} ${words(f.type,f.segment,f.body)}`)};});
+ const versions=D.versions.map(v=>({kind:'version',id:v.id,title:`${v.name} · ${v.version}`,sub:`${fmt(C.total(v),0)} km · ${cv(v.power)} CV`,right:kEuro(v.msrp),img:v.image,hay:I.norm(`${v.name} ${v.version} ${v.type} ${words(v.type,v.segment,v.body)}`)}));
+ return [...models,...versions];
+}
+function palSearch(q){
+ const all=palIndex(),tokens=I.norm(q).split(/\s+/).filter(Boolean);
+ if(!tokens.length)return all.filter(x=>x.kind==='model');
+ const hit=x=>tokens.every(k=>x.hay.includes(k)||(compact(k)&&compact(x.hay).includes(compact(k))));
+ // Prefer titles starting with the query, then matches at word starts ("dolphin g" → DOLPHIN G, not "Design"), models before versions.
+ const wordStart=(h,k)=>new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(h)||/[^\x00-\x7f]/.test(k);
+ const score=x=>{const n=I.norm(x.title);return (n.startsWith(tokens[0])?0:4)+(tokens.every(k=>wordStart(x.hay,k))?0:2)+(x.kind==='model'?0:1);};
+ return all.filter(hit).map((x,i)=>({x,i,s:score(x)})).sort((a,b)=>a.s-b.s||a.i-b.i).map(r=>r.x).slice(0,14);
+}
+function renderPalette(){
+ const q=$('#palQuery').value;palItems=palSearch(q);palActive=Math.min(palActive,Math.max(0,palItems.length-1));
+ let last='';
+ $('#palList').innerHTML=palItems.length?palItems.map((x,i)=>{const head=x.kind!==last?`<div class="pal-group" role="presentation">${t(x.kind==='model'?'catalog':'palVersions')}</div>`:'';last=x.kind;
+  return `${head}<button class="pal-item" role="option" id="pal-${i}" data-pal="${i}" aria-selected="${i===palActive}" tabindex="-1"><img src="${x.img}" alt="" loading="lazy"><span><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></span><em class="num">${esc(x.right)}</em></button>`;}).join(''):`<p class="pal-empty">${t('palEmpty')}</p>`;
+ $('#palQuery').setAttribute('aria-activedescendant',palItems.length?`pal-${palActive}`:'');
+}
+function palMove(i){palActive=(i+palItems.length)%palItems.length;$('#palList').querySelectorAll('.pal-item').forEach((el,j)=>el.setAttribute('aria-selected',j===palActive));$('#pal-'+palActive)?.scrollIntoView({block:'nearest'});$('#palQuery').setAttribute('aria-activedescendant','pal-'+palActive);}
+function openPalette(){
+ const p=$('#palette');if(!p||p.open)return;closeFly();
+ $('#palQuery').placeholder=t('search');$('#palQuery').setAttribute('aria-label',t('search'));$('#palHint').textContent=t('palHint');
+ $('#palQuery').value='';palActive=0;renderPalette();p.showModal();$('#palQuery').focus();
+}
+function palPick(i){
+ const x=palItems[i];if(!x)return;$('#palette').close();
+ if(x.kind==='model'){if(modalId)closeDialog(true);navigate('model',x.id);}else{S.eqQuery='';renderDetail(x.id);}
+}
+$('#palQuery').addEventListener('input',()=>{palActive=0;renderPalette();});
+$('#palQuery').addEventListener('keydown',e=>{
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(palItems.length)palMove(palActive+(e.key==='ArrowDown'?1:-1));}
+ if(e.key==='Enter'){e.preventDefault();palPick(palActive);}
+});
+$('#palList').addEventListener('click',e=>{const b=e.target.closest('[data-pal]');if(b)palPick(Number(b.dataset.pal));});
+$('#palList').addEventListener('pointermove',e=>{const b=e.target.closest('[data-pal]');if(b&&Number(b.dataset.pal)!==palActive)palMove(Number(b.dataset.pal));});
+$('#palette').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.close();});
+const typing=el=>el&&(el.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+document.addEventListener('keydown',e=>{
+ if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();const p=$('#palette');p.open?p.close():openPalette();return;}
+ if(e.key==='/'&&!e.metaKey&&!e.ctrlKey&&!typing(e.target)){e.preventDefault();openPalette();}
+});
+// Row lens: one clear glass capsule glides to the hovered row of the ranking and cost lists (mouse only).
+document.addEventListener('pointerover',e=>{
+ if(e.pointerType!=='mouse')return;
+ const row=e.target.closest?.('#ladder > .l-row, #costList > .l-row');if(!row)return;
+ const box=row.parentElement;let lens=box.querySelector(':scope > .row-lens');
+ if(!lens){lens=document.createElement('div');lens.className='row-lens';lens.setAttribute('aria-hidden','true');box.prepend(lens);box.classList.add('has-row-lens');}
+ const jump=!lens.classList.contains('on');if(jump)lens.style.transition='none';
+ lens.style.setProperty('--ly',`${row.offsetTop}px`);lens.style.height=`${row.offsetHeight}px`;
+ if(jump){void lens.offsetWidth;lens.style.transition='';}
+ lens.classList.add('on');
+},{passive:true});
+document.addEventListener('pointerout',e=>{const box=e.target.closest?.('#ladder, #costList');if(box&&!box.contains(e.relatedTarget))box.querySelector(':scope > .row-lens')?.classList.remove('on');},{passive:true});
 render();
 })();
