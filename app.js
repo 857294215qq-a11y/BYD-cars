@@ -5,8 +5,10 @@ const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=
 const VIEWS=['catalog','model','rank','cost','compare','learn','quote'];
 const COST_DEFAULT={km:1500,home:0.15,pub:0.50,homeShare:0.8,petrol:1.55,ref:6.5,auto:true,phevShare:0.6};
 function parseHash(){const [view,sub='']=location.hash.slice(1).split('/');return VIEWS.includes(view)?{view,sub:decodeURIComponent(sub)}:{view:'catalog',sub:''};}
-let saved={};try{saved=JSON.parse(localStorage.getItem('byd-guide-v1')||'{}');}catch{}
-const savedTheme = localStorage.getItem('byd-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+// Storage can throw (blocked site data, sandboxed previews); never let it stop the first render.
+let saved={};try{const v=JSON.parse(localStorage.getItem('byd-guide-v1')||'{}');if(v&&typeof v==='object')saved=v;}catch{}
+let storedTheme=null;try{storedTheme=localStorage.getItem('byd-theme');}catch{}
+const savedTheme = storedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 const S={lang:saved.lang==='es'?'es':'zh',theme:saved.theme||savedTheme,...parseHash(),type:'',family:'',query:'',price:'msrp',budget:0,sort:'',seg:'',body:'',selected:(saved.selected||[]).filter(id=>D.versions.some(v=>v.id===id)).slice(0,4),familyVersion:{},rankSort:'total',rankDir:'',diff:false,eqQuery:'',cost:{...COST_DEFAULT,...(saved.cost||{})},quoteColor:{}};
 document.documentElement.dataset.theme = S.theme;
 let modalId=null,toastTimer;
