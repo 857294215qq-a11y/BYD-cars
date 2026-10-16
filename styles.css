@@ -3394,7 +3394,7 @@ html[data-theme="dark"] .notice {
 }
 
 /* Nav labels: both languages share one grid cell (stable width); switching cross-fades with a blur. */
-.bi{display:inline-grid;justify-items:center}
+.bi{display:inline-grid;justify-items:center;align-items:center}
 .bi>span{grid-area:1/1;transition:opacity .34s var(--ease) .06s,filter .34s var(--ease) .06s,transform .34s var(--ease) .06s,visibility 0s}
 html[data-lang="zh"] .bi>[lang="es"],html[data-lang="es"] .bi>[lang="zh-CN"]{opacity:0;filter:blur(6px);transform:scale(.9);visibility:hidden;transition:opacity .2s var(--ease),filter .2s var(--ease),transform .2s var(--ease),visibility 0s linear .2s}
 /* Current page: one capsule that slides between nav items. */
@@ -3429,7 +3429,7 @@ input[type=range]::-webkit-slider-runnable-track{background:linear-gradient(90de
 input[type=range]::-moz-range-progress{height:5px;border-radius:99px;background:var(--ev)}
 .cost-summary>div{min-width:0}
 .cost-summary em{display:block}
-.cost-list .l-head,.cost-list .l-row{grid-template-columns:26px minmax(150px,1.15fr) minmax(120px,2fr) 96px 132px 30px}
+@media(min-width:901px){.cost-list .l-head,.cost-list .l-row{grid-template-columns:26px minmax(150px,1.15fr) minmax(120px,2fr) 96px 132px 30px}}
 /* Medium widths (most laptops in split view): assumptions move above the list, in columns. */
 @media(max-width:1240px){
  .cost-layout{grid-template-columns:minmax(0,1fr)}
@@ -3587,3 +3587,36 @@ html[data-theme="dark"] .pal-item[aria-selected="true"]{background:rgba(255,255,
 
 @media(prefers-reduced-motion:reduce){.switch:active .sw i{--sx:1;--sy:1}.row-lens{transition:opacity .2s}.pal-box{animation:none}}
 @media print{.search-toggle,.palette,.row-lens{display:none!important}}
+
+/* Detail window figures: the caption under each number sits on its own line */
+.dialog-hero .stats>div{min-width:0}
+.dialog-hero .stats span{display:block;margin-top:3px;font-size:12px;color:var(--graphite)}
+
+/* --------------------------------------------------------------------------
+   Phones
+   -------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  /* The nav is two rows here (~111px); keep titles and menus clear of it */
+  .page-hero { padding-top: 140px; }
+  .flyout { top: 120px; }
+  .fly-inner { padding: 14px; max-height: calc(100dvh - 140px); overscroll-behavior: contain; }
+  /* Model menu: BEV and PHEV stacked, two compact cards per row */
+  .fly-cols { grid-template-columns: 1fr; gap: 16px; }
+  .fly-models { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  .fly-model { flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px; min-width: 0; }
+  .fly-model img { width: 84px; height: 44px; }
+  .fly-model span { min-width: 0; }
+  .fly-model b { font-size: 13px; line-height: 1.25; }
+  .fly-model small { font-size: 10.5px; line-height: 1.35; }
+  .fly-item { padding: 10px 12px; }
+  /* Model page key figures: two per row, values may wrap */
+  .model-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; margin: 20px 0; }
+  .model-stats dd { font-size: 20px; white-space: normal; }
+  .model-slogan { font-size: 16px; }
+  /* Cost list: cost and yearly difference side by side under the bar */
+  .cost-list .l-row { grid-template-columns: 22px repeat(2, minmax(0, 1fr)) 32px; }
+  .cost-list .lc:not(.good):not(.bad) { grid-column: 2 / 3; }
+  .cost-list .lc.good, .cost-list .lc.bad { grid-column: 3 / 5; }
+  .dialog-hero .stats { gap: 16px 24px; }
+  .hero-media-caption button { white-space: nowrap; flex: none; }
+}
