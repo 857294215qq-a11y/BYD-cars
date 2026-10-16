@@ -5,8 +5,10 @@ const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=
 const VIEWS=['catalog','model','rank','cost','compare','learn','quote'];
 const COST_DEFAULT={km:1500,home:0.15,pub:0.50,homeShare:0.8,petrol:1.55,ref:6.5,auto:true,phevShare:0.6};
 function parseHash(){const [view,sub='']=location.hash.slice(1).split('/');return VIEWS.includes(view)?{view,sub:decodeURIComponent(sub)}:{view:'catalog',sub:''};}
-let saved={};try{saved=JSON.parse(localStorage.getItem('byd-guide-v1')||'{}');}catch{}
-const savedTheme = localStorage.getItem('byd-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+// Storage can throw (blocked site data, sandboxed previews); never let it stop the first render.
+let saved={};try{const v=JSON.parse(localStorage.getItem('byd-guide-v1')||'{}');if(v&&typeof v==='object')saved=v;}catch{}
+let storedTheme=null;try{storedTheme=localStorage.getItem('byd-theme');}catch{}
+const savedTheme = storedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 const S={lang:saved.lang==='es'?'es':'zh',theme:saved.theme||savedTheme,...parseHash(),type:'',family:'',query:'',price:'msrp',budget:0,sort:'',seg:'',body:'',selected:(saved.selected||[]).filter(id=>D.versions.some(v=>v.id===id)).slice(0,4),familyVersion:{},rankSort:'total',rankDir:'',diff:false,eqQuery:'',cost:{...COST_DEFAULT,...(saved.cost||{})},quoteColor:{}};
 document.documentElement.dataset.theme = S.theme;
 let modalId=null,toastTimer;
@@ -17,12 +19,13 @@ const fmt=(n,d=1)=>n==null?t('unknown'):new Intl.NumberFormat(locale(),{maximumF
 const money=n=>n==null?t('unknown'):new Intl.NumberFormat(locale(),{style:'currency',currency:'EUR',maximumFractionDigits:Number.isInteger(n)?0:2}).format(n);
 const cv=n=>Math.round(n*1.359621617);
 const vget=id=>D.versions.find(v=>v.id===id),fget=id=>D.families.find(v=>v.id===id);
-const icon=(name)=>{const p={arrow:'<path d="M5 12h14m-6-6 6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',check:'<path d="m5 12 4 4L19 6"/>',screen:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',print:'<path d="M7 8V3h10v5M7 17H4V9h16v8h-3"/><path d="M7 13h10v8H7z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14l-1.41 1.41"/>',moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',sparkle:'<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>',zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'};return `<svg class="icon icon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p[name]||p.arrow}</svg>`;};
+const icon=(name)=>{const p={arrow:'<path d="M5 12h14m-6-6 6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',check:'<path d="m5 12 4 4L19 6"/>',screen:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',print:'<path d="M7 8V3h10v5M7 17H4V9h16v8h-3"/><path d="M7 13h10v8H7z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14l-1.41 1.41"/>',moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',sparkle:'<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>',zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'};return `<svg class="icon icon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p[name]||p.arrow}</svg>`;};
 const btn=(label,action,id='',classes='')=>`<button class="btn ${classes}" data-action="${action}" ${id?`data-id="${esc(id)}"`:''}>${label}</button>`;
 const typePill=type=>`<span class="pill ${type==='BEV'?'ev':'phev'}">${t(type==='BEV'?'bev':'phev')}</span>`;
 const segmented=(action,active,opts)=>`<div class="seg" data-action-group="${action}"><div class="seg-glider" aria-hidden="true"></div>${opts.map(([val,label])=>`<button data-action="${action}" data-id="${val}" aria-pressed="${active===val}">${label}</button>`).join('')}</div>`;
 const typeSeg=(action,active)=>segmented(action,active,[['',t('all')],['BEV',t('bev')],['PHEV',t('phev')]]);
 const selected=id=>S.selected.includes(id);
+const MOD_KEY=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent)?'⌘':'Ctrl';
 function save(){try{localStorage.setItem('byd-guide-v1',JSON.stringify({lang:S.lang,selected:S.selected,cost:S.cost,theme:S.theme}));}catch{}}
 function toast(msg){$('#toast').textContent=msg;$('#toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('on'),3000);}
 // Capsule indicators for segmented controls, chips, sub-tabs and the nav.
@@ -133,13 +136,14 @@ function renderNav(){
  document.title=S.lang==='es'?'BYD España · Comparador de versiones':'BYD España · 车型与版本指南';
  const navEl=$('#nav');if(!navEl)return;
  if(!navEl.querySelector('.nav-links')){
-  navEl.innerHTML=`<button class="brand" data-action="view" data-id="catalog" aria-label="BYD España"><span class="byd-logo">BYD</span><span class="brand-region">España</span></button><div class="nav-links">${NAV_KEYS.map(k=>{const menu=!['compare','cost'].includes(k);return `<button data-action="view" data-id="${k}" ${menu?`data-menu="${k}" aria-haspopup="true" aria-expanded="false"`:''}>${bi(k)}${menu?chevron:''}</button>`;}).join('')}</div><div class="nav-actions"><button class="theme-toggle btn compact" data-action="theme"></button><div class="seg lang" data-action-group="lang"><button data-action="lang" data-id="zh">中文</button><button data-action="lang" data-id="es">ES</button></div></div>`;
+  navEl.innerHTML=`<button class="brand" data-action="view" data-id="catalog" aria-label="BYD España"><span class="byd-logo">BYD</span><span class="brand-region">España</span></button><div class="nav-links">${NAV_KEYS.map(k=>{const menu=!['compare','cost'].includes(k);return `<button data-action="view" data-id="${k}" ${menu?`data-menu="${k}" aria-haspopup="true" aria-expanded="false"`:''}>${bi(k)}${menu?chevron:''}</button>`;}).join('')}</div><div class="nav-actions"><button class="search-toggle" data-action="palette">${icon('search')}</button><button class="theme-toggle btn compact" data-action="theme"></button><div class="seg lang" data-action-group="lang"><button data-action="lang" data-id="zh">中文</button><button data-action="lang" data-id="es">ES</button></div></div>`;
  }
  navEl.querySelectorAll('.nav-links [data-action="view"]').forEach(b=>{
   const k=b.dataset.id,cur=S.view===k||(k==='catalog'&&S.view==='model');
   if(cur)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
   if(b.dataset.menu)b.setAttribute('aria-expanded',flyMenu===k);
  });
+ const searchBtn=navEl.querySelector('.search-toggle');searchBtn.setAttribute('aria-label',t('search'));searchBtn.title=`${t('search')} · ${MOD_KEY} K`;
  const themeBtn=navEl.querySelector('.theme-toggle');
  themeBtn.setAttribute('aria-label',t('themeToggle'));themeBtn.title=t('themeToggle');themeBtn.innerHTML=icon(S.theme==='dark'?'sun':'moon');
  navEl.querySelectorAll('.seg.lang button').forEach(b=>b.setAttribute('aria-pressed',S.lang===b.dataset.id));
@@ -224,9 +228,98 @@ function rawEquipment(vs){
 function links(f,compact=false){return `<div class="source-links">${[['model','modelPage'],['config','configPage'],['compare','compareJSON'],['promo','promoPage']].filter(([k])=>f.sources[k]&&!(k==='promo'&&f.id==='tang')).map(([k,l])=>`<a href="${esc(f.sources[k])}" target="_blank" rel="noopener">${t(l)}</a>`).join('')}<a href="catalog/${f.id}.pdf" target="_blank">${t('catalogPDF')}</a></div>`;}
 function sourceCard(f){return `<article class="source-card"><h3>${f.name}</h3>${links(f)}${f.notes.length?`<div class="notice"><b>${t('notice')}</b>${f.notes.map(n=>`<p>${esc(n[S.lang==='es'?1:0])}</p>`).join('')}</div>`:''}${f.promotionOriginal?`<p class="hint">${t('promoUntil')} 31/10/2026 · ${t('expiryHint')}</p><details class="terms"><summary>${t('showOriginal')}</summary><p lang="es">${esc(f.promotionOriginal)}</p></details>`:''}</article>`;}
 function sourcesFor(vs){return `<div class="source-columns">${[...new Set(vs.map(v=>v.family))].map(fid=>sourceCard(fget(fid))).join('')}</div>`;}
+// Radar: each axis runs from the lowest to the highest of all versions, so "further out" is always better
+// (axes marked lo are reversed). Up to three versions overlay in one chart; four become small multiples,
+// because no fourth colour stays distinguishable when every outline can cross every other.
+const RADAR_AXES=[['total','rd_total'],['range','rd_range'],['power','rd_power'],['accel','rd_accel',1],['dc','rd_dc'],['consumption','rd_cons',1],['msrp','rd_price',1],['boot','rd_boot']];
+const RADAR_SHAPES=['circle','square','diamond'];
+const radarSlots=new Map(); // version id → colour slot; survivors keep their colour when the selection changes
+function radarSlot(vs){
+ for(const id of [...radarSlots.keys()])if(!vs.some(v=>v.id===id))radarSlots.delete(id);
+ vs.forEach(v=>{if(!radarSlots.has(v.id)){const used=new Set(radarSlots.values());let k=0;while(used.has(k))k++;radarSlots.set(v.id,k);}});
+ return v=>radarSlots.get(v.id);
+}
+function radarValue(v,key){
+ const x=C.metric(v,key);
+ if(key==='msrp')return money(x);
+ if(key==='dc')return x?`${fmt(x,0)} kW`:t('unsupported');
+ if(key==='power')return `${fmt(x,0)} kW · ≈ ${cv(x)} CV`;
+ if(key==='accel')return `${f1(x)} s`;
+ if(key==='consumption')return `${f1(x)} kWh/100 km`;
+ if(key==='boot')return `${fmt(x,0)} L`;
+ return `${fmt(x,0)} km`;
+}
+function radarScore(v,key,lo){
+ const all=D.versions.map(v=>C.metric(v,key)).filter(C.present),min=Math.min(...all),max=Math.max(...all),x=C.metric(v,key);
+ if(!C.present(x))return null;
+ const s=max>min?(x-min)/(max-min):1;
+ return 0.12+0.88*(lo?1-s:s); // keep the weakest value off the dead centre
+}
+function radarMark(shape,x,y,r){
+ if(shape==='square')return `<rect x="${(x-r*.85).toFixed(1)}" y="${(y-r*.85).toFixed(1)}" width="${(r*1.7).toFixed(1)}" height="${(r*1.7).toFixed(1)}" rx="1.5"/>`;
+ if(shape==='diamond')return `<path d="M${x.toFixed(1)} ${(y-r*1.15).toFixed(1)}L${(x+r*1.15).toFixed(1)} ${y.toFixed(1)}L${x.toFixed(1)} ${(y+r*1.15).toFixed(1)}L${(x-r*1.15).toFixed(1)} ${y.toFixed(1)}Z"/>`;
+ return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}"/>`;
+}
+// One SVG. series: [{v, cls, shape|null}] drawn in order (context first, focus last).
+function radarSvg(series,label){
+ const R=118,n=RADAR_AXES.length,ang=i=>-Math.PI/2+i*2*Math.PI/n,pt=(i,r)=>[Math.cos(ang(i))*R*r,Math.sin(ang(i))*R*r];
+ const ring=f=>RADAR_AXES.map((_,i)=>pt(i,f).map(c=>c.toFixed(1)).join(',')).join(' ');
+ let g=[0.25,0.5,0.75,1].map(f=>`<polygon class="rd-ring" points="${ring(f)}"/>`).join('')+RADAR_AXES.map((_,i)=>{const [x,y]=pt(i,1);return `<line class="rd-spoke" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;}).join('');
+ g+=RADAR_AXES.map(([k,lab,lo],i)=>{const [x,y]=pt(i,1.16),c=Math.cos(ang(i)),anchor=Math.abs(c)<0.2?'middle':c>0?'start':'end',dy=Math.sin(ang(i))>0.5?12:Math.sin(ang(i))<-0.5?-4:4;
+  return `<text class="rd-axis" x="${x.toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anchor}">${esc(t(lab))}${lo?' ↓':''}</text>`;}).join('');
+ for(const s of series){
+  const pts=RADAR_AXES.map(([k,,lo],i)=>{const r=radarScore(s.v,k,lo);return r==null?null:pt(i,r);});
+  const poly=pts.filter(Boolean).map(p=>p.map(c=>c.toFixed(1)).join(',')).join(' ');
+  g+=`<g class="rd-series ${s.cls}" data-id="${s.v.id}" data-shape="${s.shape||''}"><polygon class="rd-area" points="${poly}"/>`;
+  if(s.shape)g+=pts.map((p,i)=>p?`<g class="rd-pt" data-axis="${i}">${radarMark(s.shape,p[0],p[1],4.5)}<title>${esc(`${s.v.name} ${s.v.version} · ${t(RADAR_AXES[i][1])}: ${radarValue(s.v,RADAR_AXES[i][0])}`)}</title></g>`:'').join('');
+  g+='</g>';
+ }
+ return `<svg class="rd-svg" viewBox="-215 -160 430 322" role="img" aria-label="${esc(label)}"><line class="rd-cross" x1="0" y1="0" x2="0" y2="0"/>${g}</svg>`;
+}
+function radarBlock(vs){
+ if(!vs.length)return '';
+ const head=`<div class="rd-head"><h2>${t('radarTitle')}</h2><p>${t('radarNote')}</p></div>`;
+ const name=v=>`${esc(v.name)} · ${esc(v.version)}`;
+ if(vs.length<=3){
+  const slot=radarSlot(vs),series=vs.map(v=>({v,cls:`s${slot(v)+1}`,shape:RADAR_SHAPES[slot(v)]}));
+  const legend=vs.length>1?`<div class="rd-legend">${series.map(s=>`<button class="rd-key ${s.cls}" data-rd="${s.v.id}" aria-pressed="false"><svg viewBox="-7 -7 14 14" aria-hidden="true">${radarMark(s.shape,0,0,4.5)}</svg>${name(s.v)}</button>`).join('')}</div>`:'';
+  return `<section class="radar">${head}${legend}<div class="rd-plot">${radarSvg(series,`${t('radarTitle')}: ${vs.map(v=>`${v.name} ${v.version}`).join(', ')}`)}<div class="rd-tip" role="status" hidden></div></div></section>`;
+ }
+ // Four versions: small multiples, each highlights one version against the others in grey.
+ radarSlots.clear();
+ return `<section class="radar">${head}<p class="rd-multi-note">${t('radarMulti')}</p><div class="rd-multi">${vs.map(v=>`<figure class="rd-plot"><figcaption>${name(v)}</figcaption>${radarSvg([...vs.filter(o=>o!==v).map(o=>({v:o,cls:'ctx',shape:null})),{v,cls:'s1',shape:'circle'}],`${t('radarTitle')}: ${v.name} ${v.version}`)}<div class="rd-tip" role="status" hidden></div></figure>`).join('')}</div></section>`;
+}
+const compareContent=vs=>radarBlock(vs)+comparisonTable(vs)+rawEquipment(vs)+sourcesFor(vs);
+// Radar hover: the pointer picks the nearest axis (points of close versions overlap, so no pinpoint
+// targets); the tooltip lists every version's value on that axis. Legend hover / press isolates one version.
+function radarTip(e){
+ const plot=e.target.closest?.('.rd-plot'),svg=plot?.querySelector('.rd-svg');if(!svg)return;
+ const tip=plot.querySelector('.rd-tip'),cross=svg.querySelector('.rd-cross');
+ const m=svg.getScreenCTM(),x=(e.clientX-m.e)/m.a,y=(e.clientY-m.f)/m.d,n=RADAR_AXES.length;
+ svg.querySelectorAll('.rd-pt.on').forEach(el=>el.classList.remove('on'));
+ if((e.type==='pointerleave'&&e.pointerType!=='touch')||Math.hypot(x,y)>150||Math.hypot(x,y)<14){tip.hidden=true;cross.setAttribute('x2',0);cross.setAttribute('y2',0);return;}
+ const i=((Math.round((Math.atan2(y,x)+Math.PI/2)/(2*Math.PI/n))%n)+n)%n,[k,lab,lo]=RADAR_AXES[i],a=-Math.PI/2+i*2*Math.PI/n;
+ cross.setAttribute('x2',(Math.cos(a)*118).toFixed(1));cross.setAttribute('y2',(Math.sin(a)*118).toFixed(1));
+ svg.querySelectorAll(`.rd-pt[data-axis="${i}"]`).forEach(el=>el.classList.add('on'));
+ // Legend order in the overlay; in a small multiple the highlighted version (drawn last) comes first.
+ const groups=[...svg.querySelectorAll('.rd-series')];if(svg.querySelector('.rd-series.ctx'))groups.reverse();
+ const rows=groups.map(g=>{const v=vget(g.dataset.id),sh=g.dataset.shape;
+  return `<div class="${g.classList.contains('ctx')?'ctx':''}"><svg viewBox="-7 -7 14 14" class="${[...g.classList].find(c=>/^s\d$/.test(c))||'ctx'}" aria-hidden="true">${sh?radarMark(sh,0,0,4.5):'<rect x="-5" y="-1" width="10" height="2"/>'}</svg><em>${esc(v.name)} · ${esc(v.version)}</em><strong class="num">${esc(radarValue(v,k))}</strong></div>`;});
+ tip.innerHTML=`<b>${esc(t(lab))}${lo?' ↓':''}</b>${rows.join('')}`;tip.hidden=false;
+ const pr=plot.getBoundingClientRect(),ax=m.e+Math.cos(a)*118*m.a-pr.left,ay=m.f+Math.sin(a)*118*m.d-pr.top;
+ tip.style.left=`${Math.min(Math.max(ax,tip.offsetWidth/2+4),pr.width-tip.offsetWidth/2-4)}px`;
+ tip.style.top=`${Math.max(ay-12,tip.offsetHeight+4)}px`;
+}
+document.addEventListener('pointermove',radarTip,{passive:true});
+document.addEventListener('pointerdown',e=>{if(e.target.closest?.('.rd-plot'))radarTip(e);else document.querySelectorAll('.rd-tip:not([hidden])').forEach(tip=>{tip.hidden=true;tip.closest('.rd-plot').querySelectorAll('.rd-pt.on').forEach(el=>el.classList.remove('on'));tip.closest('.rd-plot').querySelector('.rd-cross')?.setAttribute('x2',0);tip.closest('.rd-plot').querySelector('.rd-cross')?.setAttribute('y2',0);});},{passive:true});
+document.addEventListener('pointerleave',e=>{if(e.target.classList?.contains('rd-plot'))radarTip(e);},true);
+function radarFocus(radar,id){radar.classList.toggle('isolate',!!id);radar.querySelectorAll('.rd-series').forEach(g=>g.classList.toggle('focus',g.dataset.id===id));radar.querySelectorAll('.rd-key').forEach(b=>b.setAttribute('aria-pressed',b.dataset.rd===id));}
+document.addEventListener('pointerover',e=>{const k=e.target.closest?.('.rd-key');if(k&&e.pointerType==='mouse')radarFocus(k.closest('.radar'),k.dataset.rd);},{passive:true});
+document.addEventListener('pointerout',e=>{const k=e.target.closest?.('.rd-key');if(k&&e.pointerType==='mouse'&&!k.contains(e.relatedTarget)&&!k.closest('.radar').dataset.pinned)radarFocus(k.closest('.radar'),'');},{passive:true});
+document.addEventListener('click',e=>{const k=e.target.closest?.('.rd-key');if(!k)return;const radar=k.closest('.radar'),on=radar.dataset.pinned===k.dataset.rd;radar.dataset.pinned=on?'':k.dataset.rd;radarFocus(radar,on?'':k.dataset.rd);});
 function renderCompare(){
  const vs=comparisonIds().map(vget).filter(Boolean);
- $('#main').innerHTML=`<div class="wrap">${hero('compareTitle','compareSub')}${vs.length?`<div class="compare-actions"><label><input type="checkbox" id="onlyDiff" ${S.diff?'checked':''}>${t('onlyDiff')}</label><div>${btn(icon('print')+t('print'),'print','','compact')}${btn(t('backModels'),'view','catalog','compact')}${btn(t('clear'),'clear','','compact')}</div></div><div id="comparisonContent">${comparisonTable(vs)}${rawEquipment(vs)}${sourcesFor(vs)}</div>`:`<div class="empty"><h2>${t('noSelection')}</h2><p>${t('noSelectionSub')}</p><div class="quick-start">${btn('SEAL · '+t('compareFamily'),'familyCompare','seal','primary')}${btn('ATTO 2 DM-i · '+t('compareFamily'),'familyCompare','atto-2-dm-i')}${btn('DOLPHIN SURF · '+t('compareFamily'),'familyCompare','dolphin-surf')}</div></div>`}${footer()}</div>`;
+ $('#main').innerHTML=`<div class="wrap">${hero('compareTitle','compareSub')}${vs.length?`<div class="compare-actions"><label class="switch"><input type="checkbox" role="switch" id="onlyDiff" ${S.diff?'checked':''}><span class="sw" aria-hidden="true"><i></i></span>${t('onlyDiff')}</label><div>${btn(icon('print')+t('print'),'print','','compact')}${btn(t('backModels'),'view','catalog','compact')}${btn(t('clear'),'clear','','compact')}</div></div><div id="comparisonContent">${compareContent(vs)}</div>`:`<div class="empty"><h2>${t('noSelection')}</h2><p>${t('noSelectionSub')}</p><div class="quick-start">${btn('SEAL · '+t('compareFamily'),'familyCompare','seal','primary')}${btn('ATTO 2 DM-i · '+t('compareFamily'),'familyCompare','atto-2-dm-i')}${btn('DOLPHIN SURF · '+t('compareFamily'),'familyCompare','dolphin-surf')}</div></div>`}${footer()}</div>`;
 }
 // Ladder: every version on one shared km scale; electric + fuel range stacked, key numbers beside.
 const SORTS=[['total','sortTotal'],['range','sortRange'],['fuelRange','sortFuelRange'],['msrp','sortPrice'],['consumption','sortConsumption'],['fuel','sortFuel'],['weightedFuel','sortWeighted'],['power','sortPower'],['accel','sortAccel'],['dc','sortDC'],['battery','sortBattery']];
@@ -522,7 +615,7 @@ function morph(open){
 }
 function renderDetail(id,srcEl=null){
  const v=vget(id);if(!v||morphing)return;const f=fget(v.family),d=$('#detail');
- modalId=id;
+ modalId=id;$('#detailPanel').dataset.type=v.type;
  if(d.open){$('#detailBody').innerHTML=detailBodyHtml(v,f);return;}
  $('#detailBody').innerHTML=detailBodyHtml(v,f);
  d.showModal();$('#detailPanel').scrollTop=0;
@@ -602,6 +695,7 @@ document.addEventListener('click',event=>{
   renderDetail(id,origin);
  }
  if(action==='close')closeDialog();
+ if(action==='palette')openPalette();
  if(action==='clear'){S.selected=[];familyCompareIds=null;save();render();}
  if(action==='reset'){Object.assign(S,{type:'',family:'',seg:'',body:'',query:'',price:'msrp',budget:0,sort:''});renderCatalog();}
  if(action==='familyCompare'){if(modalId)closeDialog(true);familyCompareIds=D.versions.filter(v=>v.family===id).map(v=>v.id);S.diff=false;S.eqQuery='';navigate('compare');}
@@ -613,7 +707,7 @@ document.addEventListener('change',event=>{
  if(['family','price','sort','budget'].includes(id)){S[id]=id==='budget'?Number(el.value):el.value;renderCards();}
  if(id==='rankSort'){S.rankSort=el.value;S.rankDir='';renderLadder();}
  if(id==='quoteColor'){S.quoteColor[el.dataset.id]=el.value;renderQuote(el.dataset.id);}
- if(id==='onlyDiff'){S.diff=el.checked;renderCompare();}
+ if(id==='onlyDiff'){S.diff=el.checked;$('#comparisonContent').innerHTML=compareContent(comparisonIds().map(vget).filter(Boolean));}
 });
 // Flyouts: hover on pointer devices, tap on touch, ArrowDown / Escape from the keyboard.
 $('#nav').addEventListener('mouseover',e=>{if(!canHover())return;const b=e.target.closest('[data-menu]');if(b)openFly(b.dataset.menu);else if(e.target.closest('.nav-links button,.nav-actions,.brand'))closeFly(120);});
@@ -635,5 +729,67 @@ window.addEventListener('resize',()=>syncGliders(),{passive:true});
 $('#detail').addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 $('#detail').addEventListener('close',()=>{modalId=null;});
 window.addEventListener('hashchange',()=>{Object.assign(S,parseHash());if(S.view==='rank'&&S.sub&&groupOf(S.rankSort)!==S.sub){const g=RANK_GROUPS.find(x=>x[0]===S.sub);if(g){S.rankSort=g[1][0];S.rankDir='';}}closeFly();render();window.scrollTo({top:0,behavior:'instant'});});
+// Quick search (⌘K on Mac, Ctrl K elsewhere, or "/"): jump straight to a model page or a version's details.
+let palItems=[],palActive=0;
+const compact=s=>s.replace(/[^a-z0-9\u4e00-\u9fff]/g,'');
+function palIndex(){
+ // Type words include everyday short forms (插混, 电车, EV…) as well as the interface labels.
+ const words=(type,seg,body)=>[I.strings[type==='BEV'?'bev':'phev'],type==='BEV'?'ev 电动 电车':'插混 混动 hybrid hibrido',I.strings['seg'+seg],I.strings['body_'+body]].filter(Boolean).flat().join(' ');
+ const models=D.families.map(f=>{const vs=D.versions.filter(v=>v.family===f.id),lo=Math.min(...vs.map(v=>v.msrp).filter(C.present));
+  return {kind:'model',id:f.id,title:f.name,sub:`${t(f.type==='BEV'?'bev':'phev')} · ${vs.length} ${t('versions')}`,right:Number.isFinite(lo)?`${t('from')} ${kEuro(lo)}`:'',img:f.image,hay:I.norm(`${f.name} ${f.id} ${f.type} ${words(f.type,f.segment,f.body)}`)};});
+ const versions=D.versions.map(v=>({kind:'version',id:v.id,title:`${v.name} · ${v.version}`,sub:`${fmt(C.total(v),0)} km · ${cv(v.power)} CV`,right:kEuro(v.msrp),img:v.image,hay:I.norm(`${v.name} ${v.version} ${v.type} ${words(v.type,v.segment,v.body)}`)}));
+ return [...models,...versions];
+}
+function palSearch(q){
+ const all=palIndex(),tokens=I.norm(q).split(/\s+/).filter(Boolean);
+ if(!tokens.length)return all.filter(x=>x.kind==='model');
+ const hit=x=>tokens.every(k=>x.hay.includes(k)||(compact(k)&&compact(x.hay).includes(compact(k))));
+ // Prefer titles starting with the query, then matches at word starts ("dolphin g" → DOLPHIN G, not "Design"), models before versions.
+ const wordStart=(h,k)=>new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(h)||/[^\x00-\x7f]/.test(k);
+ const score=x=>{const n=I.norm(x.title);return (n.startsWith(tokens[0])?0:4)+(tokens.every(k=>wordStart(x.hay,k))?0:2)+(x.kind==='model'?0:1);};
+ return all.filter(hit).map((x,i)=>({x,i,s:score(x)})).sort((a,b)=>a.s-b.s||a.i-b.i).map(r=>r.x).slice(0,14);
+}
+function renderPalette(){
+ const q=$('#palQuery').value;palItems=palSearch(q);palActive=Math.min(palActive,Math.max(0,palItems.length-1));
+ let last='';
+ $('#palList').innerHTML=palItems.length?palItems.map((x,i)=>{const head=x.kind!==last?`<div class="pal-group" role="presentation">${t(x.kind==='model'?'catalog':'palVersions')}</div>`:'';last=x.kind;
+  return `${head}<button class="pal-item" role="option" id="pal-${i}" data-pal="${i}" aria-selected="${i===palActive}" tabindex="-1"><img src="${x.img}" alt="" loading="lazy"><span><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></span><em class="num">${esc(x.right)}</em></button>`;}).join(''):`<p class="pal-empty">${t('palEmpty')}</p>`;
+ $('#palQuery').setAttribute('aria-activedescendant',palItems.length?`pal-${palActive}`:'');
+}
+function palMove(i){palActive=(i+palItems.length)%palItems.length;$('#palList').querySelectorAll('.pal-item').forEach((el,j)=>el.setAttribute('aria-selected',j===palActive));$('#pal-'+palActive)?.scrollIntoView({block:'nearest'});$('#palQuery').setAttribute('aria-activedescendant','pal-'+palActive);}
+function openPalette(){
+ const p=$('#palette');if(!p||p.open)return;closeFly();
+ $('#palQuery').placeholder=t('search');$('#palQuery').setAttribute('aria-label',t('search'));$('#palHint').textContent=t('palHint');
+ $('#palQuery').value='';palActive=0;renderPalette();p.showModal();$('#palQuery').focus();
+}
+function palPick(i){
+ const x=palItems[i];if(!x)return;$('#palette').close();
+ if(x.kind==='model'){if(modalId)closeDialog(true);navigate('model',x.id);}else{S.eqQuery='';renderDetail(x.id);}
+}
+$('#palQuery').addEventListener('input',()=>{palActive=0;renderPalette();});
+$('#palQuery').addEventListener('keydown',e=>{
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(palItems.length)palMove(palActive+(e.key==='ArrowDown'?1:-1));}
+ if(e.key==='Enter'){e.preventDefault();palPick(palActive);}
+});
+$('#palList').addEventListener('click',e=>{const b=e.target.closest('[data-pal]');if(b)palPick(Number(b.dataset.pal));});
+$('#palList').addEventListener('pointermove',e=>{const b=e.target.closest('[data-pal]');if(b&&Number(b.dataset.pal)!==palActive)palMove(Number(b.dataset.pal));});
+$('#palette').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.close();});
+const typing=el=>el&&(el.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+document.addEventListener('keydown',e=>{
+ if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();const p=$('#palette');p.open?p.close():openPalette();return;}
+ if(e.key==='/'&&!e.metaKey&&!e.ctrlKey&&!typing(e.target)){e.preventDefault();openPalette();}
+});
+// Row lens: one clear glass capsule glides to the hovered row of the ranking and cost lists (mouse only).
+document.addEventListener('pointerover',e=>{
+ if(e.pointerType!=='mouse')return;
+ const row=e.target.closest?.('#ladder > .l-row, #costList > .l-row');if(!row)return;
+ const box=row.parentElement;let lens=box.querySelector(':scope > .row-lens');
+ if(!lens){lens=document.createElement('div');lens.className='row-lens';lens.setAttribute('aria-hidden','true');box.prepend(lens);box.classList.add('has-row-lens');}
+ const jump=!lens.classList.contains('on');if(jump)lens.style.transition='none';
+ lens.style.setProperty('--ly',`${row.offsetTop}px`);lens.style.height=`${row.offsetHeight}px`;
+ if(jump){void lens.offsetWidth;lens.style.transition='';}
+ lens.classList.add('on');
+},{passive:true});
+document.addEventListener('pointerout',e=>{const box=e.target.closest?.('#ladder, #costList');if(box&&!box.contains(e.relatedTarget))box.querySelector(':scope > .row-lens')?.classList.remove('on');},{passive:true});
 render();
 })();

@@ -45,6 +45,9 @@ var BYDI18N = (() => {
  quoteCostNote:['按“用车成本”页的假设计算：','Según las hipótesis de Coste de uso:'],quoteDisclaimer:['本页为参考信息，不构成要约。价格、促销与配置以签约时官方条件为准；续航与能耗为 WLTP 认证值。','Documento orientativo, no constituye oferta. Precios, promociones y equipamiento según condiciones oficiales al firmar; autonomía y consumos WLTP.'],
  themeToggle:['切换主题外观','Cambiar modo de tema'],
 
+ radarTitle:['综合表现','Perfil comparado'],radarNote:['越靠外越好。每条轴以全部 32 个版本的最低到最高为刻度；标 ↓ 的项目数值越低越好，已反向。指针移到某条轴附近（手机上点一下）可看各版本的具体数值，下方表格有全部数字。','Cuanto más hacia fuera, mejor. Cada eje va del mínimo al máximo de las 32 versiones; en los ejes con ↓ un valor menor es mejor y se ha invertido. Acerca el cursor a un eje (en el móvil, tócalo) para ver el valor de cada versión; la tabla de abajo tiene todas las cifras.'],radarMulti:['4 个版本分开画更清楚：每张图突出一个版本，灰线是另外三个。','Con 4 versiones, un gráfico por versión: cada uno resalta una y las líneas grises son las otras tres.'],
+ rd_total:['总续航','Autonomía total'],rd_range:['纯电续航','Autonomía eléctrica'],rd_power:['动力','Potencia'],rd_accel:['0–100 加速','0–100 km/h'],rd_dc:['直流快充','Carga CC'],rd_cons:['电耗','Consumo'],rd_price:['价格','Precio'],rd_boot:['后备箱','Maletero'],
+ palVersions:['版本','Versiones'],palEmpty:['没有匹配的车型或版本','Ningún modelo o versión coincide'],palHint:['↑↓ 选择 · Enter 打开 · Esc 关闭','↑↓ elegir · Enter abrir · Esc cerrar'],
  cg_use:['用车','Uso'],cg_elec:['电','Electricidad'],cg_fuel:['油','Gasolina'],cg_phev:['插电混动','Híbridos enchufables'],
  };
  const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
