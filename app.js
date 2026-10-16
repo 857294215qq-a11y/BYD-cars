@@ -228,7 +228,95 @@ function rawEquipment(vs){
 function links(f,compact=false){return `<div class="source-links">${[['model','modelPage'],['config','configPage'],['compare','compareJSON'],['promo','promoPage']].filter(([k])=>f.sources[k]&&!(k==='promo'&&f.id==='tang')).map(([k,l])=>`<a href="${esc(f.sources[k])}" target="_blank" rel="noopener">${t(l)}</a>`).join('')}<a href="catalog/${f.id}.pdf" target="_blank">${t('catalogPDF')}</a></div>`;}
 function sourceCard(f){return `<article class="source-card"><h3>${f.name}</h3>${links(f)}${f.notes.length?`<div class="notice"><b>${t('notice')}</b>${f.notes.map(n=>`<p>${esc(n[S.lang==='es'?1:0])}</p>`).join('')}</div>`:''}${f.promotionOriginal?`<p class="hint">${t('promoUntil')} 31/10/2026 · ${t('expiryHint')}</p><details class="terms"><summary>${t('showOriginal')}</summary><p lang="es">${esc(f.promotionOriginal)}</p></details>`:''}</article>`;}
 function sourcesFor(vs){return `<div class="source-columns">${[...new Set(vs.map(v=>v.family))].map(fid=>sourceCard(fget(fid))).join('')}</div>`;}
-const compareContent=vs=>comparisonTable(vs)+rawEquipment(vs)+sourcesFor(vs);
+// Radar: each axis runs from the lowest to the highest of all versions, so "further out" is always better
+// (axes marked lo are reversed). Up to three versions overlay in one chart; four become small multiples,
+// because no fourth colour stays distinguishable when every outline can cross every other.
+const RADAR_AXES=[['total','rd_total'],['range','rd_range'],['power','rd_power'],['accel','rd_accel',1],['dc','rd_dc'],['consumption','rd_cons',1],['msrp','rd_price',1],['boot','rd_boot']];
+const RADAR_SHAPES=['circle','square','diamond'];
+const radarSlots=new Map(); // version id → colour slot; survivors keep their colour when the selection changes
+function radarSlot(vs){
+ for(const id of [...radarSlots.keys()])if(!vs.some(v=>v.id===id))radarSlots.delete(id);
+ vs.forEach(v=>{if(!radarSlots.has(v.id)){const used=new Set(radarSlots.values());let k=0;while(used.has(k))k++;radarSlots.set(v.id,k);}});
+ return v=>radarSlots.get(v.id);
+}
+function radarValue(v,key){
+ const x=C.metric(v,key);
+ if(key==='msrp')return money(x);
+ if(key==='dc')return x?`${fmt(x,0)} kW`:t('unsupported');
+ if(key==='power')return `${fmt(x,0)} kW · ≈ ${cv(x)} CV`;
+ if(key==='accel')return `${f1(x)} s`;
+ if(key==='consumption')return `${f1(x)} kWh/100 km`;
+ if(key==='boot')return `${fmt(x,0)} L`;
+ return `${fmt(x,0)} km`;
+}
+function radarScore(v,key,lo){
+ const all=D.versions.map(v=>C.metric(v,key)).filter(C.present),min=Math.min(...all),max=Math.max(...all),x=C.metric(v,key);
+ if(!C.present(x))return null;
+ const s=max>min?(x-min)/(max-min):1;
+ return 0.12+0.88*(lo?1-s:s); // keep the weakest value off the dead centre
+}
+function radarMark(shape,x,y,r){
+ if(shape==='square')return `<rect x="${(x-r*.85).toFixed(1)}" y="${(y-r*.85).toFixed(1)}" width="${(r*1.7).toFixed(1)}" height="${(r*1.7).toFixed(1)}" rx="1.5"/>`;
+ if(shape==='diamond')return `<path d="M${x.toFixed(1)} ${(y-r*1.15).toFixed(1)}L${(x+r*1.15).toFixed(1)} ${y.toFixed(1)}L${x.toFixed(1)} ${(y+r*1.15).toFixed(1)}L${(x-r*1.15).toFixed(1)} ${y.toFixed(1)}Z"/>`;
+ return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}"/>`;
+}
+// One SVG. series: [{v, cls, shape|null}] drawn in order (context first, focus last).
+function radarSvg(series,label){
+ const R=118,n=RADAR_AXES.length,ang=i=>-Math.PI/2+i*2*Math.PI/n,pt=(i,r)=>[Math.cos(ang(i))*R*r,Math.sin(ang(i))*R*r];
+ const ring=f=>RADAR_AXES.map((_,i)=>pt(i,f).map(c=>c.toFixed(1)).join(',')).join(' ');
+ let g=[0.25,0.5,0.75,1].map(f=>`<polygon class="rd-ring" points="${ring(f)}"/>`).join('')+RADAR_AXES.map((_,i)=>{const [x,y]=pt(i,1);return `<line class="rd-spoke" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;}).join('');
+ g+=RADAR_AXES.map(([k,lab,lo],i)=>{const [x,y]=pt(i,1.16),c=Math.cos(ang(i)),anchor=Math.abs(c)<0.2?'middle':c>0?'start':'end',dy=Math.sin(ang(i))>0.5?12:Math.sin(ang(i))<-0.5?-4:4;
+  return `<text class="rd-axis" x="${x.toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anchor}">${esc(t(lab))}${lo?' ↓':''}</text>`;}).join('');
+ for(const s of series){
+  const pts=RADAR_AXES.map(([k,,lo],i)=>{const r=radarScore(s.v,k,lo);return r==null?null:pt(i,r);});
+  const poly=pts.filter(Boolean).map(p=>p.map(c=>c.toFixed(1)).join(',')).join(' ');
+  g+=`<g class="rd-series ${s.cls}" data-id="${s.v.id}" data-shape="${s.shape||''}"><polygon class="rd-area" points="${poly}"/>`;
+  if(s.shape)g+=pts.map((p,i)=>p?`<g class="rd-pt" data-axis="${i}">${radarMark(s.shape,p[0],p[1],4.5)}<title>${esc(`${s.v.name} ${s.v.version} · ${t(RADAR_AXES[i][1])}: ${radarValue(s.v,RADAR_AXES[i][0])}`)}</title></g>`:'').join('');
+  g+='</g>';
+ }
+ return `<svg class="rd-svg" viewBox="-215 -160 430 322" role="img" aria-label="${esc(label)}"><line class="rd-cross" x1="0" y1="0" x2="0" y2="0"/>${g}</svg>`;
+}
+function radarBlock(vs){
+ if(!vs.length)return '';
+ const head=`<div class="rd-head"><h2>${t('radarTitle')}</h2><p>${t('radarNote')}</p></div>`;
+ const name=v=>`${esc(v.name)} · ${esc(v.version)}`;
+ if(vs.length<=3){
+  const slot=radarSlot(vs),series=vs.map(v=>({v,cls:`s${slot(v)+1}`,shape:RADAR_SHAPES[slot(v)]}));
+  const legend=vs.length>1?`<div class="rd-legend">${series.map(s=>`<button class="rd-key ${s.cls}" data-rd="${s.v.id}" aria-pressed="false"><svg viewBox="-7 -7 14 14" aria-hidden="true">${radarMark(s.shape,0,0,4.5)}</svg>${name(s.v)}</button>`).join('')}</div>`:'';
+  return `<section class="radar">${head}${legend}<div class="rd-plot">${radarSvg(series,`${t('radarTitle')}: ${vs.map(v=>`${v.name} ${v.version}`).join(', ')}`)}<div class="rd-tip" role="status" hidden></div></div></section>`;
+ }
+ // Four versions: small multiples, each highlights one version against the others in grey.
+ radarSlots.clear();
+ return `<section class="radar">${head}<p class="rd-multi-note">${t('radarMulti')}</p><div class="rd-multi">${vs.map(v=>`<figure class="rd-plot"><figcaption>${name(v)}</figcaption>${radarSvg([...vs.filter(o=>o!==v).map(o=>({v:o,cls:'ctx',shape:null})),{v,cls:'s1',shape:'circle'}],`${t('radarTitle')}: ${v.name} ${v.version}`)}<div class="rd-tip" role="status" hidden></div></figure>`).join('')}</div></section>`;
+}
+const compareContent=vs=>radarBlock(vs)+comparisonTable(vs)+rawEquipment(vs)+sourcesFor(vs);
+// Radar hover: the pointer picks the nearest axis (points of close versions overlap, so no pinpoint
+// targets); the tooltip lists every version's value on that axis. Legend hover / press isolates one version.
+function radarTip(e){
+ const plot=e.target.closest?.('.rd-plot'),svg=plot?.querySelector('.rd-svg');if(!svg)return;
+ const tip=plot.querySelector('.rd-tip'),cross=svg.querySelector('.rd-cross');
+ const m=svg.getScreenCTM(),x=(e.clientX-m.e)/m.a,y=(e.clientY-m.f)/m.d,n=RADAR_AXES.length;
+ svg.querySelectorAll('.rd-pt.on').forEach(el=>el.classList.remove('on'));
+ if((e.type==='pointerleave'&&e.pointerType!=='touch')||Math.hypot(x,y)>150||Math.hypot(x,y)<14){tip.hidden=true;cross.setAttribute('x2',0);cross.setAttribute('y2',0);return;}
+ const i=((Math.round((Math.atan2(y,x)+Math.PI/2)/(2*Math.PI/n))%n)+n)%n,[k,lab,lo]=RADAR_AXES[i],a=-Math.PI/2+i*2*Math.PI/n;
+ cross.setAttribute('x2',(Math.cos(a)*118).toFixed(1));cross.setAttribute('y2',(Math.sin(a)*118).toFixed(1));
+ svg.querySelectorAll(`.rd-pt[data-axis="${i}"]`).forEach(el=>el.classList.add('on'));
+ // Legend order in the overlay; in a small multiple the highlighted version (drawn last) comes first.
+ const groups=[...svg.querySelectorAll('.rd-series')];if(svg.querySelector('.rd-series.ctx'))groups.reverse();
+ const rows=groups.map(g=>{const v=vget(g.dataset.id),sh=g.dataset.shape;
+  return `<div class="${g.classList.contains('ctx')?'ctx':''}"><svg viewBox="-7 -7 14 14" class="${[...g.classList].find(c=>/^s\d$/.test(c))||'ctx'}" aria-hidden="true">${sh?radarMark(sh,0,0,4.5):'<rect x="-5" y="-1" width="10" height="2"/>'}</svg><em>${esc(v.name)} · ${esc(v.version)}</em><strong class="num">${esc(radarValue(v,k))}</strong></div>`;});
+ tip.innerHTML=`<b>${esc(t(lab))}${lo?' ↓':''}</b>${rows.join('')}`;tip.hidden=false;
+ const pr=plot.getBoundingClientRect(),ax=m.e+Math.cos(a)*118*m.a-pr.left,ay=m.f+Math.sin(a)*118*m.d-pr.top;
+ tip.style.left=`${Math.min(Math.max(ax,tip.offsetWidth/2+4),pr.width-tip.offsetWidth/2-4)}px`;
+ tip.style.top=`${Math.max(ay-12,tip.offsetHeight+4)}px`;
+}
+document.addEventListener('pointermove',radarTip,{passive:true});
+document.addEventListener('pointerdown',e=>{if(e.target.closest?.('.rd-plot'))radarTip(e);else document.querySelectorAll('.rd-tip:not([hidden])').forEach(tip=>{tip.hidden=true;tip.closest('.rd-plot').querySelectorAll('.rd-pt.on').forEach(el=>el.classList.remove('on'));tip.closest('.rd-plot').querySelector('.rd-cross')?.setAttribute('x2',0);tip.closest('.rd-plot').querySelector('.rd-cross')?.setAttribute('y2',0);});},{passive:true});
+document.addEventListener('pointerleave',e=>{if(e.target.classList?.contains('rd-plot'))radarTip(e);},true);
+function radarFocus(radar,id){radar.classList.toggle('isolate',!!id);radar.querySelectorAll('.rd-series').forEach(g=>g.classList.toggle('focus',g.dataset.id===id));radar.querySelectorAll('.rd-key').forEach(b=>b.setAttribute('aria-pressed',b.dataset.rd===id));}
+document.addEventListener('pointerover',e=>{const k=e.target.closest?.('.rd-key');if(k&&e.pointerType==='mouse')radarFocus(k.closest('.radar'),k.dataset.rd);},{passive:true});
+document.addEventListener('pointerout',e=>{const k=e.target.closest?.('.rd-key');if(k&&e.pointerType==='mouse'&&!k.contains(e.relatedTarget)&&!k.closest('.radar').dataset.pinned)radarFocus(k.closest('.radar'),'');},{passive:true});
+document.addEventListener('click',e=>{const k=e.target.closest?.('.rd-key');if(!k)return;const radar=k.closest('.radar'),on=radar.dataset.pinned===k.dataset.rd;radar.dataset.pinned=on?'':k.dataset.rd;radarFocus(radar,on?'':k.dataset.rd);});
 function renderCompare(){
  const vs=comparisonIds().map(vget).filter(Boolean);
  $('#main').innerHTML=`<div class="wrap">${hero('compareTitle','compareSub')}${vs.length?`<div class="compare-actions"><label class="switch"><input type="checkbox" role="switch" id="onlyDiff" ${S.diff?'checked':''}><span class="sw" aria-hidden="true"><i></i></span>${t('onlyDiff')}</label><div>${btn(icon('print')+t('print'),'print','','compact')}${btn(t('backModels'),'view','catalog','compact')}${btn(t('clear'),'clear','','compact')}</div></div><div id="comparisonContent">${compareContent(vs)}</div>`:`<div class="empty"><h2>${t('noSelection')}</h2><p>${t('noSelectionSub')}</p><div class="quick-start">${btn('SEAL · '+t('compareFamily'),'familyCompare','seal','primary')}${btn('ATTO 2 DM-i · '+t('compareFamily'),'familyCompare','atto-2-dm-i')}${btn('DOLPHIN SURF · '+t('compareFamily'),'familyCompare','dolphin-surf')}</div></div>`}${footer()}</div>`;
